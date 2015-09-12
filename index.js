@@ -1,9 +1,13 @@
 import React from 'react';
 import ReactDom from 'react-dom';
-// import App from './components/App';
-import { CircleInRect, AnimatedCircle } from './components/Circle';
+import { AnimatedCircleWithState } from './components/Circle';
 
-ReactDom.render(
-  <AnimatedCircle />,
+window.app = ReactDom.render(
+  <AnimatedCircleWithState />,
   document.getElementById('root')
 );
+
+document.addEventListener('click', (e) => {
+  const { clientX: x, clientY: y } = e;
+  app.setState({ x, y });
+});
