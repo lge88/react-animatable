@@ -1,13 +1,17 @@
 import React from 'react';
 import ReactDom from 'react-dom';
-import { AnimatedCircleWithState } from './components/Circle';
+import { AnimatedCircle, makeStateful } from './components/Circle';
 
-window.app = ReactDom.render(
+const wrapFn = makeStateful({ x: 0, y: 0, radius: 50 });
+const AnimatedCircleWithState = wrapFn(AnimatedCircle);
+
+window.circle = ReactDom.render(
   <AnimatedCircleWithState />,
   document.getElementById('root')
 );
 
-document.addEventListener('click', (e) => {
+document.addEventListener('mousemove', (e) => {
   const { clientX: x, clientY: y } = e;
-  app.setState({ x, y });
+  const state = { x, y };
+  circle.setState(state);
 });

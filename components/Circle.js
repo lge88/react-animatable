@@ -1,5 +1,7 @@
 import React from 'react';
-const { sqrt, exp, cos, sin, abs, max } = Math;
+const { sqrt, cos, sin, abs, max } = Math;
+const exp = (t) => { return Math.exp(t); };
+
 
 // Get current milliseconds.
 const now = () => (new Date()).getTime();
@@ -44,8 +46,8 @@ export const solveQuadraticEquation = ({ a, b, c }) => {
 // Linear damping model
 // Return a object contains:
 //   x_t: analytical solution of displacement over time
-//   v_t: analytical solution of velocity over time. (TODO)
-//   a_t: analytical solution of acceleration over time. (TODO)
+//   v_t: analytical solution of velocity over time.
+//   a_t: analytical solution of acceleration over time. (TODO?)
 export const solveMassSpringDamperAnalytical = ({
   initialDisplacement = -1.0,
   initialVelocity = 0.0,
@@ -58,13 +60,14 @@ export const solveMassSpringDamperAnalytical = ({
   const [ m, k, c ] = [ mass, stiffness, dampingCoefficient ];
   // Natural frequency
   const w0 = sqrt(k / m);
-  const T = 2*Math.PI/w0;
-  console.log(`T: ${T}`);
+  /* const T = 2 * Math.PI / w0; */
+  // console.log(`T: ${T}`);
 
   // Damping Ratio
   const zeta = 0.5 * c / sqrt(m * k);
 
   let x_t;
+  let v_t;
   if (zeta > 1) {
     // Over-damping
     // gamma^2 + 2*zeta*gamma + w0^2 = 0
@@ -76,73 +79,31 @@ export const solveMassSpringDamperAnalytical = ({
     const A = x0 + (gammaPlus * x0 - v0) / (gammaMinus - gammaPlus);
     const B = -(gammaPlus * x0 - v0) / (gammaMinus - gammaPlus);
     x_t = (t) => A * exp(gammaPlus * t) + B * exp(gammaMinus * t);
+    v_t = (t) => A * gammaPlus * exp(gammaPlus * t) +
+               B * gammaMinus * exp(gammaMinus * t);
   } else if (zeta === 1) {
     // Critical-damping
     const A = x0;
     const B = v0 + w0 * x0;
     x_t = (t) => (A + B * t) * exp(-w0 * t);
+    v_t = (t) => B * exp(-w0 * t) - (A + B * t) * w0 * exp(-w0 * t);
   } else {
     // Under-damping
     const wd = w0 * sqrt(1 - zeta * zeta);
     const A = x0;
     const B = (zeta * w0 * x0 + v0) / wd;
     x_t = (t) => exp(-zeta * w0 * t) * (A * cos(wd * t) + B * sin(wd * t));
+    v_t = (t) => {
+      const term1 = exp(-zeta * w0 * t) * (-zeta * w0) *
+              (A * cos(wd * t) + B * sin(wd * t));
+      const term2 = exp(-zeta * w0 * t) *
+              (-A * sin(wd * t) * wd + B * cos(wd * t) * wd);
+      return term1 + term2;
+    };
   }
 
-  return { x_t };
+  return { x_t, v_t };
 };
-
-// Return a easing function maps value from [0, 1] to [0, 1]
-const springEaseFunctor = ({
-  tension,
-  friction,
-  initialVelocity = 0.0,
-}) => {
-  const x0 = -1.0;
-  const { x_t } = solveMassSpringDamperAnalytical({
-    initialDisplacement: x0,
-    initialVelocity,
-    mass: 1.0,
-    stiffness: tension,
-    dampingCoefficient: friction,
-  });
-  // Map x(t) domain from [-1.0(initial state), 0.0(final state)] to [0, 1]
-  const normalizeDomain = mapDomain.bind(null, [ x0, 0.0 ], [ 0.0, 1.0 ]);
-  const ease = normalizeDomain(x_t);
-  return ease;
-};
-
-export const Circle = ({ radius }) => {
-  const d = 2 * radius;
-  const styles = {
-    borderRadius: '50%',
-    width: d,
-    height: d,
-    boxSizing: 'border-box',
-    borderWidth: 1,
-    borderColor: 'deepskyblue',
-    borderStyle: 'solid',
-  };
-
-  return (
-    <div style={styles} />
-  );
-};
-
-export const CircleWithPosition = ({ x, y, radius }) => {
-  const styles = {
-    position: 'relative',
-    left: x,
-    top: y,
-  };
-
-  return (
-    <div style={styles}>
-      <Circle radius={radius} />
-    </div>
-  );
-};
-
 
 // x0To1_t :: Number -> Number, maps time in seconds to value in [0, 1]
 // Returns duration in milliseconds
@@ -169,6 +130,30 @@ const searchForProperDuration = (
   return duration;
 };
 
+const linearSearchForProperDuration = (
+  x0,
+  v0,
+  x_t,
+  v_t,
+  tolerance = 1 / 10000,
+  startFrom = 300,
+  stepSize = 1,
+  maxIter = 10000,
+) => {
+  /* return 500; */
+
+  const xTolerance = abs(x0) * tolerance;
+  const vTolerance = abs(v0) * tolerance;
+  const isGoodEnough = (x, v) => abs(x) < xTolerance && abs(v) < vTolerance;
+
+  let [ t, i, x, v ] = [ startFrom, 0, Infinity, Infinity ];
+  while (!isGoodEnough(x, v) && i < maxIter) {
+    const tInSeconds = t / 1000;
+    [ t, i, x, v ] = [ t + stepSize, i + 1, x_t(tInSeconds), v_t(tInSeconds) ];
+  }
+  return t;
+};
+
 const springResolver = (props) => {
   const { delay = 0.0, tolerance = 1 / 10000 } = props;
   const { tension, friction, initialVelocity } = props;
@@ -191,7 +176,31 @@ const springResolver = (props) => {
   const normalizeRange = mapRange.bind(null, [ 0, duration / 1000 ], [ 0.0, 1.0 ]);
   const timingFunction = normalizeRange(x0To1_t);
 
-  return { delay, duration, timingFunction };
+  const timingFunctor = ({
+    targetValue,
+    currentValue = 0.0,
+    currentVelocity = 0.0,
+  }) => {
+    // x_t :: time -> [ currentValue - targetValue, 0 ]
+    const x0 = currentValue - targetValue;
+    const v0 = currentVelocity;
+    const { x_t, v_t } = solveMassSpringDamperAnalytical({
+      initialDisplacement: x0,
+      initialVelocity: v0,
+      mass: 1.0,
+      stiffness: tension,
+      dampingCoefficient: friction,
+    });
+
+    const displacementFn = (t) => targetValue + x_t(t);
+    const velocityFn = v_t;
+
+    const duration = linearSearchForProperDuration(x0, v0, x_t, v_t, tolerance);
+
+    return { delay, duration, displacementFn, velocityFn };
+  };
+
+  return { /* delay, duration, timingFunction , */ timingFunctor };
 };
 
 // spec: TransitionSpec -> CSS3TransitionSpec
@@ -247,15 +256,61 @@ const makeAnimatableWrapper = (transitions) => {
 
       getInitialState() {
         const props = this.props;
+        this._initAnimatablePropSpecs(props);
+        this._initAnimatablePropStates(props);
+        return null;
+      },
 
-        const animatableProps = _transitions.reduce(
+      componentWillReceiveProps(nextProps) {
+
+        this._setToInitialAnimationState(nextProps);
+
+        /* const animate = () => {
+           this._updateAnimatingPropState();
+
+           this.forceUpdate();
+           if (this._countAnimatingProps() > 0) {
+           this._animationId = requestAnimationFrame(animate);
+           } else {
+           this._animationId = null;
+           }
+           };
+
+           animate(); */
+      },
+
+      _animatablePropSpecs: null,
+      _initAnimatablePropSpecs(props) {
+        this._animatablePropSpecs = _transitions.reduce(
           (dict, transition) => {
             transition.properties.forEach((propName) => {
               const propValue = props[propName];
+              if (typeof propValue === 'undefined') { return; }
+
+              const spec = {
+                timingFunctor: transition.spec.timingFunctor,
+              };
+              dict[propName] = spec;
+            });
+            return dict;
+          },
+          {}
+        );
+      },
+
+      _animatablePropStates: null,
+      _initAnimatablePropStates(props) {
+        this._animatablePropStates = _transitions.reduce(
+          (dict, transition) => {
+            transition.properties.forEach((propName) => {
+              const propValue = props[propName];
+              if (typeof propValue === 'undefined') { return; }
+
               const propState = {
-                prevValue: propValue,
                 currentValue: propValue,
-                nextValue: propValue,
+                currentVelocity: 0.0,
+                animationId: null,
+                targetValue: null,
               };
               dict[propName] = propState;
             });
@@ -263,78 +318,142 @@ const makeAnimatableWrapper = (transitions) => {
           },
           {}
         );
-
-        return { animatableProps };
       },
 
-      componentWillReceiveProps(nextProps) {
-        this._setToInitialAnimationState(nextProps);
-
-        const totalDuration = _transitions.reduce(
-          (sofar, transition) => max(sofar, transition.spec.duration),
-          -1
-        );
-        if (totalDuration < 0) return;
-
-        let started;
-        this._animate = () => {
-          const { animatableProps } = this.state;
-
-          const delta = now() - started;
-          if (delta >= totalDuration) {
-            this._setToFinishedAnimationState(nextProps);
-            return;
-          }
-
-          _transitions.forEach((transition) => {
-            const { delay, duration } = transition.spec;
-            const t = duration === 0 ? -1 : (delta - delay) / duration;
-            if (t < 0) { return; }
-
-            const ease = transition.spec.timingFunction;
-            transition.properties.forEach((propName) => {
-              const { prevValue, nextValue } = animatableProps[propName];
-              const diff = nextValue - prevValue;
-              const currentValue = prevValue + diff * ease(t);
-              animatableProps[propName].currentValue = currentValue;
-            });
-          });
-
-          this.forceUpdate();
-          requestAnimationFrame(this._animate);
-        };
-
-        started = now();
-        this._animate();
-      },
-
-      _setToInitialAnimationState(props) {
-        const { animatableProps } = this.state;
-        Object.keys(animatableProps).forEach((propName) => {
-          animatableProps[propName].prevValue = animatableProps[propName].currentValue;
-          animatableProps[propName].nextValue = props[propName];
-        });
-      },
-
-      _setToFinishedAnimationState(props) {
-        const { animatableProps } = this.state;
-        Object.keys(animatableProps).forEach((propName) => {
-          animatableProps[propName].currentValue = props[propName];
-        });
-      },
-
-      _resolvedProps() {
-        const { animatableProps } = this.state;
-
-        const animatablePropsValueMap = Object.keys(animatableProps).reduce(
+      _colllectAnimatableValues() {
+        const states = this._animatablePropStates;
+        const animatableProps =  Object.keys(states).reduce(
           (dict, propName) => {
-            dict[propName] = animatableProps[propName].currentValue;
+            dict[propName] = states[propName].currentValue;
             return dict;
           },
           {}
         );
+        return animatableProps;
+      },
 
-        const resolvedProps = Object.assign({}, this.props, animatablePropsValueMap);
+      _setToInitialAnimationState(props) {
+        const specs = this._animatablePropSpecs;
+        const states = this._animatablePropStates;
+
+        Object.keys(states).forEach((propName) => {
+          if (typeof props[propName] === 'undefined') { return; }
+
+          const timingFunctor = specs[propName].timingFunctor;
+          const targetValue = props[propName];
+          const state = states[propName];
+          const { currentValue, currentVelocity } = state;
+          const { delay, duration, displacementFn, velocityFn } = timingFunctor({
+            targetValue,
+            currentValue,
+            currentVelocity,
+          });
+
+          if (delay < 0 || duration <= 0) { return; }
+          /* console.log('currentValue: ', currentValue, ' targetValue: ', targetValue); */
+          /* console.log('currentValue: ', currentValue) */
+
+          const startAnimation = () => {
+            if (state.animationId !== null) {
+              cancelAnimationFrame(state.animationId);
+              state.animationId = null;
+            }
+
+            const startedTime = now();
+            const animate = () => {
+              const t = now() - startedTime;
+              const currentValue = displacementFn(t);
+              const currentVelocity = velocityFn(t);
+              /* console.log('currentValue: ', currentValue, ' targetValue: ', targetValue); */
+
+              Object.assign(state, {
+                currentValue,
+                currentVelocity,
+              });
+
+              if (t < duration) {
+                state.animationId = requestAnimationFrame(animate);
+              } else {
+                Object.assign(state, {
+                  currentValue: targetValue,
+                  currentVelocity: 0.0,
+                  animationId: null,
+                });
+              }
+            };
+            animate();
+          };
+
+          setTimeout(startAnimation, delay);
+        });
+      },
+      /* _updateAnimatingPropState() {
+         const states = this._animatablePropStates;
+
+         Object.keys(states).forEach((propName) => {
+         const state = states[propName];
+         if (!state.animating) { return; }
+
+         const { delay, duration, startedTime } = state;
+         const t = now() - startedTime - delay;
+
+         // Not delay long enough yet.
+         if (t < 0) {
+         return;
+         } else if (t >= duration) {
+         const targetValue = state.targetValue;
+         Object.assign(state, {
+         currentValue: targetValue,
+         currentVelocity: 0.0,
+
+         animating: false,
+         startedTime: null,
+         delay: null,
+         duration: null,
+         displacementFn: null,
+         velocityFn: null,
+         targetValue: null,
+         });
+         } else {
+         const { displacementFn, velocityFn } = state;
+         const currentValue = displacementFn(t);
+         const currentVelocity = velocityFn(t);
+
+         Object.assign(state, {
+         currentValue,
+         currentVelocity,
+         });
+         }
+         });
+         },
+
+         _countAnimatingProps() {
+         const states = this._animatablePropStates;
+         const count = Object.keys(states).reduce(
+         (sofar, propName) => {
+         const state = states[propName];
+         return state.animating ? sofar + 1 : sofar;
+         }, 0);
+         return count;
+         },
+
+         _setToFinishedAnimationState(props) {
+         const states = this._animatablePropStates;
+         Object.keys(states).forEach((propName) => {
+         if (typeof props[propName] === 'undefined') { return; }
+
+         const targetValue = props[propName];
+         Object.assign(states[propName], {
+         animating: false,
+         currentValue: targetValue,
+         currentVelocity: 0.0,
+         });
+         });
+         }, */
+
+      _resolvedProps() {
+        const animatablePropsValues = this._colllectAnimatableValues();
+        const resolvedProps = Object.assign({}, this.props, animatablePropsValues);
         return resolvedProps;
       },
 
@@ -348,78 +467,74 @@ const makeAnimatableWrapper = (transitions) => {
   };
 };
 
+export const Circle = ({ radius }) => {
+  const d = 2 * radius;
+  const styles = {
+    borderRadius: '50%',
+    width: d,
+    height: d,
+    boxSizing: 'border-box',
+    borderWidth: 1,
+    borderColor: 'deepskyblue',
+    borderStyle: 'solid',
+  };
+
+  return (
+    <div style={styles} />
+  );
+};
+
+export const CircleWithPosition = ({ x, y, radius }) => {
+  const [ cx, cy ] = [ x - radius, y - radius ];
+  const styles = {
+    transform: `translate(${cx}px, ${cy}px)`,
+  };
+
+  return (
+    <div style={styles}>
+      <Circle radius={radius} />
+    </div>
+  );
+};
+
 export const AnimatedCircle = makeAnimatableWrapper([
   {
     properties: [ 'x', 'y' ],
-    spec: { type: 'spring', tension: 500, friction: 20 },
+    spec: { type: 'spring', tension: 50, friction: 10 },
   },
+  /* {
+     properties: [ 'x', 'y' ],
+     spec: {
+     type: (props) => {
+     const { delay } = props;
+     const timingFunctor = ({
+     targetValue,
+     currentValue = 0.0,
+     currentVelocity = 0.0,
+     }) => {
+     const diff = targetValue - currentValue;
+     const duration = diff;
+     const displacementFn = (t) => { return currentValue + diff * t / duration; };
+     const velocityFn = () => 0;
+     return { duration, delay, displacementFn, velocityFn };
+     };
+     return { timingFunctor };
+     },
+     // duration: 100,
+     delay: 0,
+     },
+     }, */
 ])(CircleWithPosition);
 
-export const AnimatedCircleWithState = React.createClass({
-  getInitialState() {
-    return {
-      x: 0,
-      y: 0,
-      radius: 40,
-    };
-  },
-
-  render() {
-    return (<AnimatedCircle {...this.state} />);
-  },
-});
-
-
-export const AnimatedCircle_ = React.createClass({
-
-  getInitialState() {
-    return {
-      x: 0,
-      y: 0,
-      radius: 40,
-    };
-  },
-
-  componentDidMount() {
-    const delay = 1000;
-    const duration = 2000;
-
-    const [ endX, endY ] = [ 500, 0 ];
-    const config = { tension: 1200, friction: 40 };
-    const easeFn = springEaseFunctor(config);
-    const interpX = mapDomain([ 0.0, 1.0 ], [ this.state.x, endX ], easeFn);
-    const interpY = mapDomain([ 0.0, 1.0 ], [ this.state.y, endY ], easeFn);
-
-    let started;
-
-    const trigger = () => {
-      this.setState({ x: 0, y: 0 });
-      setTimeout(() => {
-        started = now();
-        this._animate();
-      }, delay);
-    };
-
-    this._animate = () => {
-      const t = (now() - started) / duration;
-      const [ x, y ] = [ interpX(t), interpY(t) ];
-      // console.log(`t: ${t}, x: ${x}, y: ${y}`);
-      this.setState({ x, y });
-      if (t < 1.0) {
-        requestAnimationFrame(this._animate);
-      } else {
-        trigger();
-      }
-    };
-
-    trigger();
-  },
-
-  render() {
-    return (
-      <CircleWithPosition {...this.state} />
-    );
-  },
-
-
-});
+export const makeStateful = (props) => {
+  return (Component) => {
+    return React.createClass({
+      getInitialState() {
+        return props;
+      },
+      render() {
+        return <Component {...this.state} />;
+      },
+    });
+  };
+};
