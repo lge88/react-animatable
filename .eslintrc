@@ -6,6 +6,7 @@
     "no-var": [0],
     "no-shadow": [0],
     "comma-dangle": [0],
-    "no-unused-vars": [1]
+    "no-unused-vars": [1],
+    "camelcase": [0]
   }
 }
