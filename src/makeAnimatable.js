@@ -1,9 +1,7 @@
 import React from 'react';
 import makeSpringTransition from './makeSpringTransition';
 import easingFunctions from './easingFunctions';
-
-// Get current milliseconds.
-const now = () => (new Date()).getTime();
+import now from 'performance-now';
 
 // TransitionSpec -> Transition
 // TransitionSpec :: {

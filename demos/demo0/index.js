@@ -1,27 +1,29 @@
 import React, { cloneElement } from 'react';
-import ReactDom from 'react-dom';
 import { HCenter, Center, VSpacer, TwoColumn } from './layout';
 import { InlineBlock, curry } from 'jsxstyle';
 import wrapState from '../../src/wrapState';
 import makeAnimatable from '../../src/makeAnimatable';
+import makePureComponent from '../makePureComponent';
 
-const Slider = ({
-  x = 0,
-  y = 0,
-  size = 50,
-  color = 'rgb(111, 166, 187)',
-  cssTransition,
-}) => {
-  const style = {
-    borderRadius: '4px',
-    background: color,
-    width: size,
-    height: size,
-    transform: `translate(${x}px, ${y}px)`,
-    transition: cssTransition,
-  };
-  return <InlineBlock {...style} />;
-};
+const Slider = makePureComponent(
+  ({
+    x = 0,
+    y = 0,
+    size = 50,
+    color = 'rgb(111, 166, 187)',
+    cssTransition,
+  }) => {
+    const style = {
+      borderRadius: '4px',
+      background: color,
+      width: size,
+      height: size,
+      transform: `translate(${x}px, ${y}px)`,
+      transition: cssTransition,
+    };
+    return <InlineBlock {...style} />;
+  }
+);
 
 const AnimatableSlider = makeAnimatable([{
   properties: [ 'x', 'y' ],
@@ -31,13 +33,17 @@ const AnimatableSlider = makeAnimatable([{
   spec: { type: 'spring', tension: 170, friction: 26 },
 }], Slider);
 
-const AnimatableSliderCSS3 = (props) => {
-  return (<Slider {...props}
-                 cssTransition="transform 0.5s ease-out" />);
-};
+const AnimatableSliderCSS3 = makePureComponent(
+  (props) => {
+    return (
+      <Slider {...props}
+              cssTransition="transform 0.5s ease-out" />
+    );
+  }
+);
 
 // value is in [0, 1]
-const SliderBar = ({
+let SliderBar = ({
   width,
   height,
   value,
@@ -56,6 +62,7 @@ const SliderBar = ({
   };
   return <InlineBlock {...style}>{slider}</InlineBlock>;
 };
+SliderBar = makePureComponent(SliderBar);
 
 const AnimatableSliderBar = curry(SliderBar, {
   SliderClass: AnimatableSlider,
@@ -65,7 +72,7 @@ const AnimatableSliderBarCSS3 = curry(SliderBar, {
   SliderClass: AnimatableSliderCSS3,
 });
 
-const Button = ({ onClick, children }) => {
+let Button = ({ onClick, children }) => {
   const color = 'deepskyblue';
   const style = {
     border: `1px solid ${color}`,
@@ -78,7 +85,7 @@ const Button = ({ onClick, children }) => {
   };
   return <button style={style} onClick={onClick}>{children}</button>;
 };
-
+Button = makePureComponent(Button);
 
 const Demo = React.createClass({
   getInitialState() {
@@ -134,7 +141,7 @@ const Demo = React.createClass({
   }
 });
 
-ReactDom.render(
+React.render(
   <Demo />,
   /* <AnimatableSliderCSS3 />, */
   /* <Slider />, */

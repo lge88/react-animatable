@@ -1,5 +1,4 @@
 import React from 'react';
-import ReactDom from 'react-dom';
 import Circle from './Circle';
 import wrapState from '../../src/wrapState';
 import makeAnimatable from '../../src/makeAnimatable';
@@ -17,7 +16,7 @@ const AnimatableCircleWithState = wrapState({
   radius: 50
 }, AnimatableCircle);
 
-window.circle = ReactDom.render(
+window.circle = React.render(
   <AnimatableCircleWithState />,
   document.getElementById('root')
 );
