@@ -143,10 +143,10 @@ const makeSpringTransition = (props) => {
       dampingCoefficient: friction,
     });
 
-    const displacementFn = (t) => targetValue + x_t(t);
-    const velocityFn = v_t;
+    const displacementFn = (t) => targetValue + x_t(t / 1000);
+    const velocityFn = (t) => v_t(t / 1000);
 
-    /* const duration = 1000; */
+    /* const duration = 100; */
     const duration = linearSearchForProperDuration(x0, v0, x_t, v_t, tolerance);
     /* console.log('duration', duration); */
 

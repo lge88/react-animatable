@@ -28,7 +28,7 @@ const AnimatableSlider = makeAnimatable([{
   /* spec: { type: 'easeOutCubic', duration: 500 }, */
   /* spec: { type: 'easeInQuad', duration: 1000 }, */
   /* spec: { type: 'easeInOutQuad', duration: 1000 }, */
-  spec: { type: 'spring', tension: 0.00120, friction: 0.17 },
+  spec: { type: 'spring', tension: 170, friction: 26 },
 }], Slider);
 
 const AnimatableSliderCSS3 = (props) => {
