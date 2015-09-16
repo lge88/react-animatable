@@ -99,31 +99,6 @@ export const solveMassSpringDamperAnalytical = ({
   return { x_t, v_t };
 };
 
-// x0To1_t :: Number -> Number, maps time in seconds to value in [0, 1]
-// Returns duration in milliseconds
-const searchForProperDuration = (
-  x0To1_t,
-  tolerance = 1 / 10000,
-  stepSize = 1,
-  maxIter = 10000,
-) => {
-  const targetValue = 1.0;
-  const linearSearch = () => {
-    let t = 0;
-    let i = 0;
-    let sofar = Infinity;
-    while (abs(sofar - targetValue) > tolerance && i < maxIter) {
-      const sec = t / 1000;
-      sofar = x0To1_t(sec);
-      t = t + stepSize;
-      i = i + 1;
-    }
-    return t;
-  };
-  const duration = linearSearch();
-  return duration;
-};
-
 const linearSearchForProperDuration = (
   x0,
   v0,
@@ -144,34 +119,15 @@ const linearSearchForProperDuration = (
   while (!isGoodEnough(x, v) && i < maxIter) {
     const tInSeconds = t / 1000;
     [ t, i, x, v ] = [ t + stepSize, i + 1, x_t(tInSeconds), v_t(tInSeconds) ];
-    console.log('x:', x, 'v: ', v);
   }
   return t;
 };
 
 const makeSpringTransition = (props) => {
   const { delay = 0.0, tolerance = 1 / 10000 } = props;
-  const { tension, friction, initialVelocity } = props;
+  const { tension, friction } = props;
 
-  const x0 = -1.0;
-  const { x_t } = solveMassSpringDamperAnalytical({
-    initialDisplacement: x0,
-    initialVelocity,
-    mass: 1.0,
-    stiffness: tension,
-    dampingCoefficient: friction,
-  });
-
-  // Map x(t) domain from [-1(initial state), 0(final state)] to [0, 1]
-  const normalizeDomain = mapDomain.bind(null, [ x0, 0.0 ], [ 0.0, 1.0 ]);
-  const x0To1_t = normalizeDomain(x_t);
-  const duration = searchForProperDuration(x0To1_t, tolerance);
-
-  // Map x(t) range from [ 0, duration ] to [0, 1]
-  const normalizeRange = mapRange.bind(null, [ 0, duration / 1000 ], [ 0.0, 1.0 ]);
-  const timingFunction = normalizeRange(x0To1_t);
-
-  const timingFunctor = ({
+  const transition = ({
     targetValue,
     currentValue = 0.0,
     currentVelocity = 0.0,
@@ -190,14 +146,15 @@ const makeSpringTransition = (props) => {
     const displacementFn = (t) => targetValue + x_t(t);
     const velocityFn = v_t;
 
+    /* const duration = 1000; */
     const duration = linearSearchForProperDuration(x0, v0, x_t, v_t, tolerance);
-    console.log('duration', duration);
+    /* console.log('duration', duration); */
 
     return { delay, duration, displacementFn, velocityFn };
   };
 
 
-  return timingFunctor;
+  return transition;
 };
 
 export default makeSpringTransition;

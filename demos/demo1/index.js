@@ -7,7 +7,7 @@ import makeAnimatable from '../../src/makeAnimatable';
 export const AnimatableCircle = makeAnimatable([
   {
     properties: [ 'x', 'y' ],
-    spec: { type: 'spring', tension: 50, friction: 10 },
+    spec: { type: 'spring', tension: 120, friction: 14 },
   },
 ], Circle);
 
