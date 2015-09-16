@@ -44,7 +44,8 @@ const createTransition = (spec) => {
     return ({
       targetValue,
       currentValue = 0.0,
-      // currentVelocity = 0.0, not used in this mode.
+      // currentVelocity = 0.0,
+      // currentVelocity is not used in this mode.
     }) => {
       return {
         delay: delay,
@@ -53,7 +54,8 @@ const createTransition = (spec) => {
           return currentValue + (targetValue - currentValue)
             * displacementFn(t / duration);
         },
-        velocityFn: (t) => (targetValue - currentValue) / duration * velocityFn(t / duration),
+        velocityFn: (t) => (targetValue - currentValue) / duration
+          * velocityFn(t / duration),
       };
     };
   } else if (typeof type === 'function') {
@@ -81,7 +83,13 @@ const makeAnimatable = (transitions, Component) => {
     };
   });
 
+  const getDisplayName = (Component) =>
+    Component.displayName || Component.name || 'Component';
+
+  const displayName = getDisplayName(Component);
+
   return React.createClass({
+    displayName: `Animatable(${displayName})`,
 
     getInitialState() {
       const props = this.props;
@@ -92,6 +100,9 @@ const makeAnimatable = (transitions, Component) => {
 
     componentWillReceiveProps(nextProps) {
       this._setToInitialAnimationState(nextProps);
+      /* console.log('current: ', this._resolvedProps()); */
+
+
     },
 
     _animatablePropSpecs: null,
@@ -180,14 +191,12 @@ const makeAnimatable = (transitions, Component) => {
             const t = now() - startedTime;
             const currentValue = displacementFn(t);
             const currentVelocity = velocityFn(t);
-            console.log('t:', t, 'currentValue: ', currentValue, ' targetValue: ', targetValue);
+            /* console.log('dur:', duration, 't:', t, 'currentValue: ', currentValue, ' targetValue: ', targetValue); */
 
             Object.assign(state, {
               currentValue,
               currentVelocity,
             });
-
-            this.forceUpdate();
 
             if (t < duration) {
               state.animationId = requestAnimationFrame(animate);
@@ -198,6 +207,8 @@ const makeAnimatable = (transitions, Component) => {
                 animationId: null,
               });
             }
+
+            this.forceUpdate();
           };
           animate();
         };
