@@ -3,6 +3,7 @@ import { HCenter, Center, VSpacer, TwoColumn } from './layout';
 import { InlineBlock, curry } from 'jsxstyle';
 import wrapState from '../../src/wrapState';
 import makeAnimatable from '../../src/makeAnimatable';
+import withTransition from '../../src/withTransition';
 import makePureComponent from '../makePureComponent';
 
 const Slider = makePureComponent(
@@ -25,13 +26,18 @@ const Slider = makePureComponent(
   }
 );
 
-const AnimatableSlider = makeAnimatable([{
-  properties: [ 'x', 'y' ],
-  /* spec: { type: 'easeOutCubic', duration: 500 }, */
-  /* spec: { type: 'easeInQuad', duration: 1000 }, */
-  /* spec: { type: 'easeInOutQuad', duration: 1000 }, */
-  spec: { type: 'spring', tension: 170, friction: 26 },
-}], Slider);
+/* const AnimatableSlider = makeAnimatable([{ */
+const AnimatableSlider = withTransition(Slider, {
+  property: [ 'x' ],
+  transition: { type: 'easeOutQuint', duration: 500 },
+  /* transition: { type: 'cubicBezier', p1: 0.1, p2: 0.3, p3: 0.4, p4: 0.7, duration: 500 }, */
+  /* transition: { type: 'easeInQuad', duration: 500 }, */
+  /* transition: { type: 'easeInOutQuad', duration: 500 }, */
+  /* transition: { type: 'spring', tension: 170, friction: 26 }, */
+}, {
+  property: [ 'y' ],
+  transition: { type: 'easeOutQuint', duration: 500 },
+});
 
 const AnimatableSliderCSS3 = makePureComponent(
   (props) => {

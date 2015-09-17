@@ -99,8 +99,6 @@ const makeAnimatable = (transitions, Component) => {
     componentWillReceiveProps(nextProps) {
       this._setToInitialAnimationState(nextProps);
       /* console.log('current: ', this._resolvedProps()); */
-
-
     },
 
     _animatablePropSpecs: null,
@@ -178,7 +176,7 @@ const makeAnimatable = (transitions, Component) => {
         /* console.log('currentValue: ', currentValue, ' targetValue: ', targetValue); */
         /* console.log('currentValue: ', currentValue) */
 
-        const startAnimation = () => {
+        const startAnimation_ = () => {
           if (state.animationId !== null) {
             cancelAnimationFrame(state.animationId);
             state.animationId = null;
@@ -212,6 +210,8 @@ const makeAnimatable = (transitions, Component) => {
         };
 
         setTimeout(startAnimation, delay);
+
+
       });
     },
 
