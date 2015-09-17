@@ -3,6 +3,7 @@ import React from 'react';
 import easingFunctions from './easingFunctions';
 import animationLoop from './animationLoop';
 import uuid from './uuid';
+const { abs } = Math;
 
 // The shared raf loop.
 const loop = animationLoop();
@@ -38,8 +39,6 @@ const createUpdatorMaker = (spec) => {
   const { type, ...otherProps } = spec;
 
   if (/[sS]pring/.test(type)) {
-    /* throw new Error(`Unknow transition maker type: ${type}`); */
-    // return makeSpringTransition(otherProps);
     const {
       tension,
       friction,
@@ -51,11 +50,11 @@ const createUpdatorMaker = (spec) => {
       let prevValue = currentValue;
       let prevVelocity = currentVelocity;
       const diff = targetValue - currentValue;
-      const absValueTolerance = Math.abs(diff * tolerance);
+      const absValueTolerance = abs(diff * tolerance);
 
       const updator = (totalTime) => {
         if (prevTime === null) {
-          // this makes timeStep = 1000/60
+          // this makes initial timeStep = 1000 / 60 milliseconds
           prevTime = totalTime - 1000 / 60;
         }
 
@@ -64,27 +63,19 @@ const createUpdatorMaker = (spec) => {
 
         // Forward Euler Method:
         // https://en.wikipedia.org/wiki/Euler_methods
-        // Unit in seconds;
-        const h = (totalTime - prevTime) / 1000;
-        const newValue = prevValue + h * prevVelocity;
-        const newVelocity = prevVelocity + h * acceleration;
-        /* console.log('a: ', acceleration, 'h: ', h);
-           console.log('t:', totalTime, 'prevVal: ', prevValue, 'prevVelocity: ', prevVelocity);
-           console.log('t: ', totalTime, 'newValue: ', newValue, 'newVelocity: ', newVelocity); */
+        // timeStep are in seconds;
+        const timeStep = (totalTime - prevTime) / 1000;
+        const newValue = prevValue + timeStep * prevVelocity;
+        const newVelocity = prevVelocity + timeStep * acceleration;
 
         prevTime = totalTime;
         prevValue = newValue;
         prevVelocity = newVelocity;
 
-        /* console.log('error', Math.abs(newValue - targetValue));
-           console.log('tol', absValueTolerance); */
-
-        if (Math.abs(newValue - targetValue) < absValueTolerance) {
-          /* console.log('end'); */
+        if (abs(newValue - targetValue) < absValueTolerance) {
           return null;
         }
 
-        // return newValue;
         return { value: newValue, velocity: newVelocity };
       };
 
@@ -157,7 +148,7 @@ const withTransition = (Component, ...transitions) => {
     getInitialState() {
       const props = this.props;
       this._componentId = uuid();
-      this._initAnimatablePropStates(props);
+      this._animatablePropStates = this._initAnimatablePropStates(props);
       return props;
     },
 
@@ -166,9 +157,20 @@ const withTransition = (Component, ...transitions) => {
     },
 
     componentWillReceiveProps(nextProps) {
+      const componentId = this._componentId;
       const states = this._animatablePropStates;
+
+      const notAnimatableProps = Object.keys(nextProps).reduce((dict, propName) => {
+        if (!(propName in states)) { dict[propName] = nextProps[propName]; }
+        return dict;
+      }, {});
+
+      // Update animatable props directly.
+      this.setState(notAnimatableProps);
+
       const animatingPropStates = Object.keys(states).reduce((dict, propName) => {
         if (typeof nextProps[propName] === 'undefined') { return dict; }
+
         const propState = states[propName];
         propState.targetValue = nextProps[propName];
 
@@ -182,8 +184,9 @@ const withTransition = (Component, ...transitions) => {
         return dict;
       }, {});
 
-      const componentId = this._componentId;
-
+      // Put animating props (animatable props that is requested to
+      // change) to the shared animation loop. If the prop is already animating,
+      // it get updated.
       Object.keys(animatingPropStates).forEach((propName) => {
         const propState = animatingPropStates[propName];
         const { updator } = propState;
@@ -213,8 +216,9 @@ const withTransition = (Component, ...transitions) => {
 
     _componentId: null,
     _animatablePropStates: null,
+
     _initAnimatablePropStates(props) {
-      this._animatablePropStates = Object.keys(_transitions).reduce(
+      return Object.keys(_transitions).reduce(
         (dict, propName) => {
           const updatorMaker = _transitions[propName];
           const propValue = props[propName];
@@ -240,9 +244,6 @@ const withTransition = (Component, ...transitions) => {
         dict[propName] = animatablePropStates[propName].currentValue;
         return dict;
       }, {});
-      /* console.log('animatablePropStates', animatablePropStates);
-         console.log('animating state', animatingState); */
-
       this.setState(animatingState);
     },
 

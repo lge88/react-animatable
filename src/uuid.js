@@ -1,3 +1,4 @@
+// http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
 export default function uuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0;

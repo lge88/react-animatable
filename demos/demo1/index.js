@@ -1,7 +1,6 @@
 import React from 'react';
 import Circle from './Circle';
-import wrapState from '../../src/wrapState';
-/* import makeAnimatable from '../../src/makeAnimatable'; */
+import wrapState from '../wrapState';
 import withTransition from '../../src/withTransition';
 
 export const AnimatableCircle = withTransition(Circle, {

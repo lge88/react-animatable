@@ -1,6 +1,6 @@
 import React from 'react';
-import { Flex, InlineBlock, Block, curry } from 'jsxstyle';
-import makePureComponent from '../makePureComponent';
+import { Flex, curry } from 'jsxstyle';
+import makePureComponent from './makePureComponent';
 
 export const HCenter = curry(Flex, {
   flexDirection: 'column',
@@ -11,10 +11,6 @@ export const Center = curry(Flex, {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-});
-
-export const VSpacer = curry(Block, {
-  marginBottom: '5px'
 });
 
 export const TwoColumn = makePureComponent(

@@ -1,19 +1,30 @@
 import now from 'performance-now';
 
 export default function animationLoop() {
-  // data[componentId][propName] = { startedTime, frameFunc }
-  const data = {};
+  // animatingState is 2D dictionray
+  // animatingState[componentId][propName] -> { startedTime, frameFunc }
+  const animatingState = {};
+
+  // renderFuncs is dictionary
+  // renderFuncs[componentId] -> renderFunc
+  // renderFunc is a callback: () -> Void provide by component used to
+  // render the interpolated state.
   const renderFuncs = {};
+
   let count = 0;
   let animationId = null;
 
   function start() {
     function loop() {
-      const time = now();
-      Object.keys(data).forEach((componentId) => {
-        Object.keys(data[componentId]).forEach((propName) => {
-          const { startedTime, frameFunc } = data[componentId][propName];
-          frameFunc(time - startedTime);
+      // Pull `currentTime' outside the loop might improve the perf (not tested)
+      // but less accurate.
+      // const currentTime = now();
+      Object.keys(animatingState).forEach((componentId) => {
+        const componentAnimatingState = animatingState[componentId];
+        Object.keys(componentAnimatingState).forEach((propName) => {
+          const { startedTime, frameFunc } = componentAnimatingState[propName];
+          const currentTime = now();
+          frameFunc(currentTime - startedTime);
         });
         const render = renderFuncs[componentId];
         render();
@@ -37,24 +48,28 @@ export default function animationLoop() {
       delete renderFuncs[componentId];
     },
     put: (componentId, propName, frameFunc) => {
-      if (!data[componentId]) {
-        data[componentId] = {};
+      if (!animatingState[componentId]) {
+        animatingState[componentId] = {};
       }
-      const startedTime = now();
-      data[componentId][propName] = { startedTime, frameFunc };
 
-      count++;
+      if (!animatingState[componentId][propName]) {
+        count++;
+      }
+
+      const startedTime = now();
+      animatingState[componentId][propName] = { startedTime, frameFunc };
+
       if (count > 0 && animationId === null) {
         start();
       }
     },
     del: (componentId, propName) => {
-      if (data[componentId] && data[componentId][propName]) {
-        delete data[componentId][propName];
-        if (Object.keys(data[componentId]).length <= 0) {
-          delete data[componentId];
-        }
+      if (animatingState[componentId] && animatingState[componentId][propName]) {
+        delete animatingState[componentId][propName];
         count--;
+        if (Object.keys(animatingState[componentId]).length <= 0) {
+          delete animatingState[componentId];
+        }
       }
 
       if (count <= 0) {
