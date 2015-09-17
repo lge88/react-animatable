@@ -1,14 +1,14 @@
 import React from 'react';
 import Circle from './Circle';
 import wrapState from '../../src/wrapState';
-import makeAnimatable from '../../src/makeAnimatable';
+/* import makeAnimatable from '../../src/makeAnimatable'; */
+import withTransition from '../../src/withTransition';
 
-export const AnimatableCircle = makeAnimatable([
-  {
-    properties: [ 'x', 'y' ],
-    spec: { type: 'spring', tension: 120, friction: 14 },
-  },
-], Circle);
+export const AnimatableCircle = withTransition(Circle, {
+  property: [ 'x', 'y' ],
+  transition: { type: 'spring', tension: 120, friction: 14 },
+  /* transition: { type: 'easeOutQuad', duration: 100 }, */
+});
 
 const AnimatableCircleWithState = wrapState({
   x: 0,

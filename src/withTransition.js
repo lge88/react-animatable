@@ -1,71 +1,95 @@
 import React from 'react';
-import makeSpringTransition from './makeSpringTransition';
+/* import makeSpringTransition from './makeSpringTransition'; */
 import easingFunctions from './easingFunctions';
 import animationLoop from './animationLoop';
+import uuid from './uuid';
 
 // The shared raf loop.
 const loop = animationLoop();
 
-const uuid = () => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-};
+// Updator :: totalTime: Number -> state: { value: Number, velocity: Number}|Null
+//   A generator of interpolated values over time. Null means animation ends.
 
-// A generator of values
-// Updator :: totalTime: Number -> value: Number|Null
-
-// cssTransitionUpdator :: CurrentValue:Number ->
-//   TargetValue: Number ->
-//   TimingFunction -> Updator
-// TimingFunction :: Function, easing function maps value from [0,1] to [0,1].
-const cssTransitionUpdator = (delay, duration, easingFunction, currentValue, targetValue) => {
+// cssTransitionUpdator :: delay: Number ->
+//   duration: Number ->
+//   easingFunction: EasingFunction ->
+//   currentValue:Number ->
+//   targetValue: Number ->
+//   Updator
+// EasingFunction :: Number -> Number, function maps value from [0,1] to [0,1].
+const cssTransitionUpdator = (
+  delay,
+  duration,
+  easingFunction,
+  currentValue,
+  targetValue
+) => {
   const diff = targetValue - currentValue;
   const updator = (totalTime) => {
     const t = (totalTime - delay) / duration;
-    if (t <= 0) return currentValue;
+    if (t <= 0) return { value: currentValue, velocity: 0.0 };
     if (t >= 1) return null;
-    return currentValue + easingFunction(t) * diff;
+    return { value: currentValue + easingFunction(t) * diff, velocity: 0.0 };
   };
   return updator;
 };
-
-// TransitionSpec -> Transition
-// TransitionSpec :: {
-//   type: String | TransitionMaker
-//   ...otherProps, will be passed in to TransitionMaker
-// }
-// TransitionMaker :: Object -> Transition, a function takes a config
-//   object, return a Transition object.
-// Transition :: TransitionInitialState -> TransitionDescriptor, a function
-//   taks initial state of the transition, returns a descriptor of transition.
-// TransitionInitialState ::
-// {
-//   targetValue: Number, the end value at which this transition is targeting.
-//   currentValue: Number,
-//   currentVelocity: Number,
-// }
-// TransitionDescriptor
-// {
-//   delay: Number, in milliseconds.
-//   duration: Number, in milliseconds.
-//   propToNumber: Any -> Number,
-//     a function maps animatable property to number, default: (x) => x.
-//   numberToProp: Any -> Number,
-//     a function maps number to animatable property, default: (x) => x.
-//   displacementFn: Number -> Number, map time to generalized
-//     displacement.
-//   velocityFn: Number -> Number, map time to generalized velocity
-// }
 
 const createUpdatorMaker = (spec) => {
   const { type, ...otherProps } = spec;
 
   if (/[sS]pring/.test(type)) {
-    throw new Error(`Unknow transition maker type: ${type}`);
+    /* throw new Error(`Unknow transition maker type: ${type}`); */
     // return makeSpringTransition(otherProps);
+    const {
+      tension,
+      friction,
+      tolerance = 1 / 1000,
+    } = otherProps;
+
+    return (currentValue, currentVelocity, targetValue) => {
+      let prevTime = null;
+      let prevValue = currentValue;
+      let prevVelocity = currentVelocity;
+      const diff = targetValue - currentValue;
+      const absValueTolerance = Math.abs(diff * tolerance);
+
+      const updator = (totalTime) => {
+        if (prevTime === null) {
+          // this makes timeStep = 1000/60
+          prevTime = totalTime - 1000 / 60;
+        }
+
+        const acceleration = (targetValue - prevValue) * tension
+          - friction * prevVelocity;
+
+        // Forward Euler Method:
+        // https://en.wikipedia.org/wiki/Euler_methods
+        // Unit in seconds;
+        const h = (totalTime - prevTime) / 1000;
+        const newValue = prevValue + h * prevVelocity;
+        const newVelocity = prevVelocity + h * acceleration;
+        /* console.log('a: ', acceleration, 'h: ', h);
+           console.log('t:', totalTime, 'prevVal: ', prevValue, 'prevVelocity: ', prevVelocity);
+           console.log('t: ', totalTime, 'newValue: ', newValue, 'newVelocity: ', newVelocity); */
+
+        prevTime = totalTime;
+        prevValue = newValue;
+        prevVelocity = newVelocity;
+
+        /* console.log('error', Math.abs(newValue - targetValue));
+           console.log('tol', absValueTolerance); */
+
+        if (Math.abs(newValue - targetValue) < absValueTolerance) {
+          /* console.log('end'); */
+          return null;
+        }
+
+        // return newValue;
+        return { value: newValue, velocity: newVelocity };
+      };
+
+      return updator;
+    };
   } else if (typeof easingFunctions[type] !== 'undefined') {
     const { displacementFn: easingFunction } = easingFunctions[type];
     const { delay = 0, duration = 1000 } = otherProps;
@@ -166,12 +190,15 @@ const withTransition = (Component, ...transitions) => {
 
         const frameFunc = (totalTime) => {
           // Get updated value:
-          const value = updator(totalTime);
+          const state = updator(totalTime);
 
-          if (value === null) {
+          if (state === null) {
+            propState.currentVelocity = 0.0;
             propState.currentValue = propState.targetValue;
             loop.del(componentId, propName);
           } else {
+            const { value, velocity } = state;
+            propState.currentVelocity = velocity;
             propState.currentValue = value;
           }
         };
@@ -213,6 +240,9 @@ const withTransition = (Component, ...transitions) => {
         dict[propName] = animatablePropStates[propName].currentValue;
         return dict;
       }, {});
+      /* console.log('animatablePropStates', animatablePropStates);
+         console.log('animating state', animatingState); */
+
       this.setState(animatingState);
     },
 
