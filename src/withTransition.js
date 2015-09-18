@@ -65,8 +65,10 @@ const withTransition = (Component, ...transitions) => {
     _animationStateStore: null,
 
     _onAnimationStateChange() {
+      /* console.time('setState'); */
       const animatingProps = this._animationStateStore.getCurrentProps();
       this.setState(animatingProps);
+      /* console.timeEnd('setState'); */
 
       // Report transition state.
       const onAnimatablePropertyChange = this.props.onAnimatablePropertyChange;

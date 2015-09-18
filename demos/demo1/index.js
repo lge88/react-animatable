@@ -1,103 +1,79 @@
 import React from 'react';
-import CircleChain from './CircleChain';
+import _CircleChain from './CircleChain';
 import withTransition from '../../src/withTransition';
 
-const transitionSpec = {
-  property: [
-    {
-      name: 'positions',
-      toDict(propValue) {
-        const positions = propValue;
-        return positions.reduce((dict, pos, i) => {
-          dict[`${i}_x`] = pos.x;
-          dict[`${i}_y`] = pos.y;
-          return dict;
-        }, {});
-      },
-      fromDict(dict) {
-        return Object.keys(dict).reduce((positions, key) => {
-          const i = parseInt(key.slice(0, -2), 10);
-          const xOrY = key.slice(-1);
-          if (!positions[i]) { positions[i] = {}; }
-          positions[i][xOrY] = dict[key];
-          return positions;
-        }, []);
-      }
+const N = 100;
+
+const CircleChain = withTransition(_CircleChain,  {
+  transition: { type: 'spring', tension: 120, friction: 17 },
+
+  property: {
+    name: 'positions',
+    toDict(propValue) {
+      const positions = propValue;
+      return positions.reduce((dict, pos, i) => {
+        dict[`${i}_x`] = pos.x;
+        dict[`${i}_y`] = pos.y;
+        return dict;
+      }, {});
     },
-  ],
-  transition: { type: 'spring', tension: 120, friction: 20 },
-};
+    fromDict(dict) {
+      return Object.keys(dict).reduce((positions, key) => {
+        const i = parseInt(key.slice(0, -2), 10);
+        const xOrY = key.slice(-1);
+        const val = dict[key];
 
-const AnimatableCircleChain = withTransition(CircleChain, transitionSpec);
+        if (!positions[i]) { positions[i] = {}; }
+        positions[i][xOrY] = val;
 
-function reducer(oldState, action) {
-  if (action.type === 'MOVE_HEAD') {
-    const targetPositions = oldState.currentPositions.slice();
-    targetPositions.unshift(action.position);
-    targetPositions.pop();
+        return positions;
+      }, []);
+    }
+  },
 
-    const newState = {
-      currentPositions: oldState.currentPositions.slice(),
-      targetPositions,
-    };
-    return newState;
-  } else if (action.type === 'UPDATE_CURRENT_POSITIONS') {
-    const targetPositions = action.currentPositions.slice();
-    targetPositions.unshift(oldState.targetPositions[0]);
-    targetPositions.pop();
-
-    const newState = {
-      currentPositions: action.currentPositions.slice(),
-      targetPositions,
-    };
-    return newState;
-  }
-
-  return oldState;
-}
+});
 
 const Demo = React.createClass({
   getInitialState() {
     return {
-      currentPositions: Array(...Array(100)).map(() => {
-        return { x: 200, y: 200 };
-      }),
-
-      targetPositions: Array(...Array(100)).map(() => {
-        return { x: 200, y: 200 };
-      }),
+      positions: Array(...Array(N)).map(() => Object({ x: 300, y: 300 })),
     };
-  },
-
-  componentDidMount() {
-    document.addEventListener('mousemove', this._onMouseMove);
   },
 
   _onMouseMove(e) {
     const { clientX: x, clientY: y } = e;
-    const newState = reducer(this.state, {
-      type: 'MOVE_HEAD',
-      position: { x, y }
-    });
-    this.setState(newState);
+    const p0 = this.state.positions[0];
+    Object.assign(p0, { x, y });
+    this.forceUpdate();
   },
 
   _onAnimatablePropertyChange(props) {
     const { positions } = props;
 
-    const newState = reducer(this.state, {
-      type: 'UPDATE_CURRENT_POSITIONS',
-      currentPositions: positions,
+    this.state.positions.forEach((pos, i) => {
+      if (i === 0) return;
+      const newPos = positions[i - 1];
+      pos.x = newPos.x;
+      pos.y = newPos.y;
     });
-    this.setState(newState);
+
+    this.forceUpdate();
   },
 
   render() {
+    const style = {
+      width: '100vw',
+      height: '100vh',
+    };
+
     return (
-      <AnimatableCircleChain
-        positions={this.state.targetPositions}
-        onAnimatablePropertyChange={this._onAnimatablePropertyChange}
-      />
+      <div style={style}
+           onMouseMove={this._onMouseMove}>
+        <CircleChain
+          positions={this.state.positions}
+          onAnimatablePropertyChange={this._onAnimatablePropertyChange}
+        />
+      </div>
     );
   }
 });

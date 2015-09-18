@@ -7,7 +7,7 @@ export default function createAnimationStateStore({
   componentProps,
   onChange,
 }) {
-  const id = uuid();
+  const _id = uuid();
 
   // state is dictionary from propName to propState.
   let state = null;
@@ -161,11 +161,13 @@ export default function createAnimationStateStore({
     return typeof state[propName] !== 'undefined';
   }
 
+  function id() { return _id; }
+
   state = initState();
 
   return {
     // queries:
-    id() { return id; },
+    id,
     getCurrentProps,
     isAnimatable,
 

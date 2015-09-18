@@ -1,6 +1,7 @@
 {
   "name": "react-animatable",
   "version": "0.1.0",
+  "main": "./src/withTransition.js",
   "dependencies": {
     "performance-now": "^0.2.0",
     "react": "^0.13.3"
@@ -8,6 +9,7 @@
   "devDependencies": {
     "babel-core": "^5.8.23",
     "babel-loader": "^5.3.2",
+    "immutable": "^3.7.5",
     "jsxstyle": "0.0.17",
     "react-hot-loader": "^1.3.0",
     "webpack": "^1.12.0",

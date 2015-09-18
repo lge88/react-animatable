@@ -28,7 +28,7 @@ module.exports = {
   resolveLoader: { fallback: path.join(__dirname, 'node_modules') },
   module: {
     loaders: [{
-      test: /\.js$/,
+      test: /\.jsx?$/,
       loaders: ['react-hot', 'babel'],
       exclude: /node_modules/,
       include: __dirname,

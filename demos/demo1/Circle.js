@@ -5,32 +5,40 @@ export default class Circle extends Component {
     x: PropTypes.number.isRequired,
     y: PropTypes.number.isRequired,
     radius: PropTypes.number.isRequired,
-    style: PropTypes.object,
+    color: PropTypes.string,
   };
 
+  shouldComponentUpdate(nextProps) {
+    const { x, y, radius, color } = this.props;
+    if (nextProps.radius !== radius) return true;
+    if (nextProps.color !== color) return true;
+    if (Math.abs(nextProps.x - x) > 1) return true;
+    if (Math.abs(nextProps.y - y) > 1) return true;
+    return false;
+  }
+
   static styles = {
-    borderWidth: 1,
-    borderColor: 'deepskyblue',
-    borderStyle: 'solid',
     position: 'absolute',
     display: 'inline-block',
     borderRadius: '50%',
     boxSizing: 'border-box',
+    backgroundColor: 'red',
   };
 
   render() {
-    const { x: cx, y: cy, radius: r, style } = this.props;
+    const { x: cx, y: cy, radius: r, color } = this.props;
     const [ d, x, y ] = [ 2 * r, cx - r, cy - r ];
+
     const _style = {
       ...Circle.styles,
-      ...style,
+      backgroundColor: color,
       width: d,
       height: d,
-      transform: `translate(${x}px, ${y}px)`,
+      // turns out translate3d is faster than translate
+      /* transform: `translate(${x}px, ${y}px)`, */
+      transform: `translate3d(${x}px, ${y}px, 0)`,
     };
 
-    return (
-      <div style={_style} />
-    );
+    return <div style={_style} />;
   }
 }
