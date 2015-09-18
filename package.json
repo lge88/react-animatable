@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "./src/withTransition.js",
   "dependencies": {
+    "bezier-easing": "^1.1.1",
     "performance-now": "^0.2.0",
     "react": "^0.13.3"
   },

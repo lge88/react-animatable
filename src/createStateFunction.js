@@ -1,5 +1,4 @@
-import easingFunctions from './easingFunctions';
-import cubicBezier from './cubicBezier';
+import bezierEasing from 'bezier-easing';
 const { abs } = Math;
 
 // StateFunction :: timeSinceStarted(in milliseconds): Number ->
@@ -97,11 +96,13 @@ export default function createStateFunction({
       currentVelocity,
       targetValue,
     });
-  } else if (/cubic[-]?[bB]eizier/.test(type)) {
-    const { p1, p2, p3, p4 } = otherProps;
+  } else if (/cubicBezier/.test(type)) {
+    const { p0, p1, p2, p3 } = otherProps;
     const { delay = 0, duration = 1000 } = otherProps;
     const { currentValue, targetValue } = otherProps;
-    const easingFunction = cubicBezier(p1, p2, p3, p4);
+
+    const easing = bezierEasing(p0, p1, p2, p3);
+    const easingFunction = (t) => easing.get(t);
 
     return createCSS3TransitionStateFunction({
       delay,
@@ -110,11 +111,12 @@ export default function createStateFunction({
       currentValue,
       targetValue,
     });
-  } else if (typeof easingFunctions[type] !== 'undefined') {
+  } else if (typeof bezierEasing[type] !== 'undefined') {
     const { delay = 0, duration = 1000 } = otherProps;
     const { currentValue, targetValue } = otherProps;
-    const { displacementFn: easingFunction } = easingFunctions[type];
-    // TODO: const easingFunction = easingFunctions[type];
+
+    const easing = bezierEasing[type];
+    const easingFunction = (t) => easing.get(t);
 
     return createCSS3TransitionStateFunction({
       delay,

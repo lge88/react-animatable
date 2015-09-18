@@ -2,7 +2,7 @@ import React from 'react';
 import _CircleChain from './CircleChain';
 import withTransition from '../../src/withTransition';
 
-const N = 100;
+const N = 10;
 
 const CircleChain = withTransition(_CircleChain,  {
   transition: { type: 'spring', tension: 120, friction: 17 },
@@ -64,6 +64,7 @@ const Demo = React.createClass({
     const style = {
       width: '100vw',
       height: '100vh',
+      background: '#eeeeee',
     };
 
     return (

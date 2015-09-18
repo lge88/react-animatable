@@ -7,14 +7,14 @@ export default function createAnimationLoop() {
   let animationId = null;
 
   function start() {
-    function loop() {
+    function update() {
       Object.keys(frameFuncs).forEach((key) => {
         const frameFunc = frameFuncs[key];
         frameFunc();
       });
-      animationId = requestAnimationFrame(loop);
+      animationId = requestAnimationFrame(update);
     }
-    loop();
+    update();
   }
 
   function stop() {

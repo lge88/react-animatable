@@ -27,11 +27,12 @@ const Slider = makePureComponent(
 
 const AnimatableSlider = withTransition(Slider, {
   property: [ 'x', 'y' ],
-  transition: { type: 'linear', duration: 500 },
-  /* transition: { type: 'easeOutQuint', duration: 500 }, */
-  /* transition: { type: 'cubicBezier', p1: 0.1, p2: 0.3, p3: 0.4, p4: 0.7, duration: 500 }, */
-  /* transition: { type: 'easeInQuad', duration: 500 }, */
-  /* transition: { type: 'easeInOutQuad', duration: 500 }, */
+  transition: { type: 'ease', duration: 500 },
+  /* transition: { type: 'linear', duration: 500 }, */
+  /* transition: { type: 'easeIn', duration: 500 }, */
+  /* transition: { type: 'easeOut', duration: 500 }, */
+  /* transition: { type: 'easeInOut', duration: 500 }, */
+  /* transition: { type: 'cubicBezier', p0: 0.1, p1: 0.3, p2: 0.4, p3: 0.9, duration: 500 }, */
   /* transition: { type: 'spring', tension: 170, friction: 26 }, */
 });
 
@@ -39,7 +40,12 @@ const AnimatableSliderCSS3 = makePureComponent(
   (props) => {
     return (
       <Slider {...props}
-              cssTransition="transform 0.5s linear"
+              cssTransition="transform 0.5s ease"
+              /* cssTransition="transform 0.5s linear" */
+              /* cssTransition="transform 0.5s ease-in" */
+              /* cssTransition="transform 0.5s ease-out" */
+              /* cssTransition="transform 0.5s ease-in-out" */
+              /* cssTransition="transform 0.5s cubic-bezier(0.1,0.3,0.4,0.9)" */
       />
     );
   }
@@ -145,7 +151,7 @@ const Demo = React.createClass({
 
         <VSpacer />
         <TwoColumn {...rowProps}>
-          <InlineBlock>React animatable:</InlineBlock>
+          <InlineBlock>React with transition:</InlineBlock>
           <AnimatableSliderBar {...sliderProps} />
         </TwoColumn>
 
